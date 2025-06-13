@@ -1,3 +1,4 @@
+"""Scrape property data from VRBO using their GraphQL API."""
 import uuid
 import requests
 from typing import Tuple, Dict, Any, List
@@ -230,6 +231,7 @@ def extract_vrbo_host(html):
     return None
 
 def extract_license_host(url, driver,timeout=7, pause=0.8):
+    """Return (license_number, host) from a VRBO property page."""
 
     driver.get(url)
 

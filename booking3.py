@@ -1,3 +1,4 @@
+"""Scrape listings from Booking.com using the GraphQL API and Selenium."""
 
 import uuid
 import requests
@@ -228,6 +229,7 @@ def extract_booking_host_cadena(text):
     return None
 
 def details(driver,url,  timeout=10, pause=0.5):
+    """Return extra booking data such as rooms, license number and host."""
     try:
         driver.get(url)
         wait = WebDriverWait(driver, 3)

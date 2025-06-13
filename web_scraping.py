@@ -1,3 +1,4 @@
+"""Airbnb scraper using Selenium and the public API."""
 
 import pandas as pd
 import requests
@@ -41,6 +42,7 @@ for i in range(16):
 print(cursors)
 
 def obtener_numero_alojamientos(driver):
+    """Return the number of listings shown in the results heading."""
     try:
         # Caso 1 y 2: Buscar el elemento con el data-testid correspondiente
         span_resultados = driver.find_element(By.CSS_SELECTOR, 'span[data-testid="stays-page-heading"]')
@@ -66,6 +68,7 @@ def obtener_numero_alojamientos(driver):
             return -1
         
 def construir_url_con_bbox(bbox):
+    """Build the Airbnb search URL for the given bounding box."""
     lat_min, lng_min, lat_max, lng_max = bbox
 
     base_url = "https://www.airbnb.es/s/Mallorca--España/homes"
@@ -99,6 +102,7 @@ def construir_url_con_bbox(bbox):
     return url
 
 def subdividir_bbox(bbox):
+    """Split the bounding box into four smaller quadrants."""
     lat_min, lng_min, lat_max, lng_max = bbox
     lat_mid = (lat_min + lat_max) / 2
     lng_mid = (lng_min + lng_max) / 2
@@ -111,6 +115,7 @@ def subdividir_bbox(bbox):
 
 
 def procesar_bbox(driver, bbox, cursors, datos, habitaciones, failed_urls, fecha=date.today()):
+    """Recursively scrape all listings inside the bounding box."""
     wait = WebDriverWait(driver, 5)  # Espera máxima de 5 segundos
 
     if habitaciones:
@@ -238,6 +243,7 @@ bbox_mallorca=(39.10129556224702,
                3.4572007960993005)
 
 def procesar_failed_urls(driver, failed_urls, habitacion, datos, fecha=date.today()):
+    """Retry scraping URLs that failed during the first pass."""
     wait = WebDriverWait(driver, 5) 
     if habitacion:
         for url in failed_urls:
