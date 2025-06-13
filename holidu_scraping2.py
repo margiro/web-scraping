@@ -1,3 +1,4 @@
+"""Scrape listings from Holidu using their public API."""
 
 
 
@@ -163,6 +164,7 @@ def extract_host(html):
     return None
 
 def get_license_host(driver, url, timeout=10, pause=0.5):
+    """Return (license_number, host) for a Holidu listing."""
 
     try:
         driver.get(url)
