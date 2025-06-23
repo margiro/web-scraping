@@ -241,6 +241,24 @@ bbox_mallorca=(39.10129556224702,
                2.3739429649583883,
                40.17457797140084,
                3.4572007960993005)
+bbox_menorca=(39.73202837261271,
+              3.8166048322976565,
+              40.183968810121,
+              4.306760466171312)
+bbox_ibiza=(38.76877967614272,
+            1.19828131814009,
+            39.164966472991914,
+            1.6218922749454237)
+bbox_formentera=(38.579720345013094,
+                 1.3865663541037065,
+                 38.77151823526658,
+                 1.5908027388515222)
+ISLAND_BBOXES={
+    "mallorca":bbox_mallorca,
+    "menorca":bbox_menorca,
+    "ibiza":bbox_ibiza,
+    "formentera":bbox_formentera
+}
 
 def procesar_failed_urls(driver, failed_urls, habitacion, datos, fecha=date.today()):
     """Retry scraping URLs that failed during the first pass."""
@@ -323,22 +341,26 @@ def procesar_failed_urls(driver, failed_urls, habitacion, datos, fecha=date.toda
     return df
 
 
-datos=[]
-failed_urls=[]
-alojamientos_mallorca=procesar_bbox(driver, bbox_mallorca, cursors, datos, False, failed_urls)
-alojamientos_mallorca=procesar_failed_urls(driver,failed_urls, False, datos )
-alojamientos_mallorca=alojamientos_mallorca.drop_duplicates()
-print(alojamientos_mallorca)
-alojamientos_mallorca.to_csv('aloj_mallorca.csv', index=False)
+all_aloj=[]
+all_hab=[]
+for isla,bbox in ISLAND_BBOXES.items():
+    datos=[]
+    failed_urls=[]
+    alojamientos=procesar_bbox(driver, bbox, cursors, datos, False, failed_urls)
+    alojamientos=procesar_failed_urls(driver,failed_urls, False, datos )
+    alojamientos=alojamientos.drop_duplicates()
+    alojamientos['isla']=isla
+    print(alojamientos)
+    all_aloj.append(alojamientos)
 
-
-datos=[]
-failed_urls=[]
-habitaciones_mallorca=procesar_bbox(driver, bbox_mallorca, cursors, datos, True, failed_urls)
-habitaciones_mallorca=procesar_failed_urls(driver,failed_urls, True, datos)
-habitaciones_mallorca=habitaciones_mallorca.drop_duplicates()
-print(habitaciones_mallorca.head())
-habitaciones_mallorca.to_csv('hab_mallorca.csv', index=False)
+    datos=[]
+    failed_urls=[]
+    habitaciones=procesar_bbox(driver, bbox, cursors, datos, True, failed_urls)
+    habitaciones=procesar_failed_urls(driver,failed_urls, True, datos)
+    habitaciones=habitaciones.drop_duplicates()
+    habitaciones['isla']=isla
+    print(habitaciones.head())
+    all_hab.append(habitaciones)
 
 driver.quit()
 
@@ -597,11 +619,11 @@ def airbnb_df(df):
 
 print('hello world')
 
-df_mallorca_alojamientos=airbnb_df(alojamientos_mallorca)
-df_mallorca_habitaciones=airbnb_df(habitaciones_mallorca)
-df_mallorca=pd.concat([df_mallorca_alojamientos, df_mallorca_habitaciones], ignore_index=True)
-df_mallorca['tipo'] = df_mallorca['Nombre'].apply(lambda x: x.split()[0] if isinstance(x, str) and x.split() else '')
-df_mallorca['tipo'] = df_mallorca['tipo'].replace('Casa', 'Casa rural')
-df_mallorca['tipo'] = df_mallorca['tipo'].replace('Apto.', 'Apartamento')
-print(df_mallorca.head())
-df_mallorca.to_csv('airbnb_mallorca_'+str(date.today())+'.csv', index=False)
+df_all_aloj=airbnb_df(pd.concat(all_aloj, ignore_index=True))
+df_all_hab=airbnb_df(pd.concat(all_hab, ignore_index=True))
+df_islas=pd.concat([df_all_aloj, df_all_hab], ignore_index=True)
+df_islas['tipo'] = df_islas['Nombre'].apply(lambda x: x.split()[0] if isinstance(x, str) and x.split() else '')
+df_islas['tipo'] = df_islas['tipo'].replace('Casa', 'Casa rural')
+df_islas['tipo'] = df_islas['tipo'].replace('Apto.', 'Apartamento')
+print(df_islas.head())
+df_islas.to_csv('airbnb_islas_'+str(date.today())+'.csv', index=False)

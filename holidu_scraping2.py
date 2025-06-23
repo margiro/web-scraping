@@ -130,8 +130,6 @@ def process_tile(sw: Tuple[float, float],
         process_tile(sub_sw, sub_ne, depth + 1)
         time.sleep(SLEEP_SECS)
 
-driver = webdriver.Chrome()
-driver.set_page_load_timeout(30)
 
 
 def ad_query(id):
@@ -206,37 +204,51 @@ def get_license_host(driver, url, timeout=10, pause=0.5):
 
 
 if __name__ == "__main__":
-    process_tile(ROOT_SW, ROOT_NE)
-    df = pd.DataFrame(results.values())
-    print(df)
-    df.to_csv("holidu_mallorca0.csv", index=False)
-    licencias=[]
-    hosts=[]
-    urls=[]
-    failed_licenses=[]
-    for id in df['id']:
-        url=ad_query(id)
-        try:
-            license, host=get_license_host(driver,url)
-            licencias.append(license)
-            hosts.append(host)
-        except:
-            failed_licenses.append(url)
+    ISLAND_BBOXES = {
+        "mallorca": ((39.10129556224702, 2.3739429649583883),
+                     (40.17457797140084, 3.4572007960993005)),
+        "menorca": ((39.73202837261271, 3.8166048322976565),
+                    (40.183968810121, 4.306760466171312)),
+        "ibiza": ((38.76877967614272, 1.19828131814009),
+                  (39.164966472991914, 1.6218922749454237)),
+        "formentera": ((38.579720345013094, 1.3865663541037065),
+                       (38.77151823526658, 1.5908027388515222)),
+    }
 
-            licencias.append(None)
-            hosts.append(None)
-        
-        urls.append(url)
-        
-    df['licencia']=licencias
-    df['anfitrion']=hosts
-    df['url']=urls
+    all_dfs = []
+    for island, (SW, NE) in ISLAND_BBOXES.items():
+        print(f"▶️ Iniciando procesamiento inicial para {island}...")
+        results = {}
+        process_tile(SW, NE)
+        df = pd.DataFrame(results.values())
+        driver = webdriver.Chrome()
+        driver.set_page_load_timeout(30)
+        licencias = []
+        hosts = []
+        urls = []
+        failed_licenses = []
+        for id in df['id']:
+            url = ad_query(id)
+            try:
+                license, host = get_license_host(driver, url)
+                licencias.append(license)
+                hosts.append(host)
+            except:
+                failed_licenses.append(url)
+                licencias.append(None)
+                hosts.append(None)
+            urls.append(url)
 
-    df['fecha']=str(date.today())
-    print(df)
-    print('han fallado '+ str(len(failed_licenses))+ 'licencias')
-    driver.quit()
-    df['fecha']=str(date.today())
+        df['licencia'] = licencias
+        df['anfitrion'] = hosts
+        df['url'] = urls
+        df['fecha'] = str(date.today())
+        df['isla'] = island
+        print(df)
+        print('han fallado '+ str(len(failed_licenses))+ 'licencias')
+        driver.quit()
+        all_dfs.append(df)
 
-    df.to_csv("holidu_mallorca_"+str(date.today())+".csv", index=False)
-    print(f"\n✅ Guardado {len(df)} alojamientos")
+    final_df = pd.concat(all_dfs, ignore_index=True)
+    final_df.to_csv("holidu_islas_"+str(date.today())+".csv", index=False)
+    print(f"\n✅ Guardado {len(final_df)} alojamientos")
