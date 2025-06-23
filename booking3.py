@@ -308,66 +308,79 @@ def details(driver,url,  timeout=10, pause=0.5):
         return None, None, None, None, None, None
 # ──────────────── MAIN ───────────────── #
 if __name__ == "__main__":
-    SW = (39.10129556224702, 2.3739429649583883)
-    NE = (40.17457797140084, 3.4572007960993005)
+    ISLAND_BBOXES = {
+        "mallorca": ((39.10129556224702, 2.3739429649583883),
+                     (40.17457797140084, 3.4572007960993005)),
+        "menorca": ((39.73202837261271, 3.8166048322976565),
+                    (40.183968810121, 4.306760466171312)),
+        "ibiza": ((38.76877967614272, 1.19828131814009),
+                  (39.164966472991914, 1.6218922749454237)),
+        "formentera": ((38.579720345013094, 1.3865663541037065),
+                       (38.77151823526658, 1.5908027388515222)),
+    }
 
-    print("▶️ Iniciando procesamiento inicial...")
-    process_tile(SW, NE)
+    all_dfs = []
+    for island, (SW, NE) in ISLAND_BBOXES.items():
+        print(f"▶️ Iniciando procesamiento inicial para {island}...")
+        failed_tiles = []
+        results = {}
+        process_tile(SW, NE)
 
-    if failed_tiles:
-        print(f"\n🔁 Reintentando {len(failed_tiles)} tiles fallidos...")
-        time.sleep(120)
-        for sw, ne in failed_tiles[:]:
-            process_tile(sw, ne)
-            time.sleep(SLEEP_SECS)
+        if failed_tiles:
+            print(f"\n🔁 Reintentando {len(failed_tiles)} tiles fallidos...")
+            time.sleep(120)
+            for sw, ne in failed_tiles[:]:
+                process_tile(sw, ne)
+                time.sleep(SLEEP_SECS)
 
-    df = pd.DataFrame(results.values())
-    print(df)
-    df.to_csv("booking_mallorca_1.csv", index=False)
-    driver = webdriver.Chrome()
-    driver.set_page_load_timeout(30)
-    num_dorms=[]
-    numero_de_licencias=[]
-    adultos=[]
-    niños=[]
-    tipo_alojamientos=[]
-    hosts=[]
-    urls=[]
+        df = pd.DataFrame(results.values())
+        driver = webdriver.Chrome()
+        driver.set_page_load_timeout(30)
+        num_dorms = []
+        numero_de_licencias = []
+        adultos = []
+        niños = []
+        tipo_alojamientos = []
+        hosts = []
+        urls = []
 
-    for name in df['name']:
-        url=ad_query(name)
-        urls.append(url)
-        try:
-            num_dorm, numero_de_licencia, n_adultos, n_niños, tipo_alojamiento, host=details(driver, url)
-        except Exception as e:
-            print(f"Error fetching {url}: {e}")
-            num_dorm = None
-            numero_de_licencia = None
-            n_adultos = None
-            n_niños = None
-            tipo_alojamiento=None
-            host=None
-        num_dorms.append(num_dorm)
-        numero_de_licencias.append(numero_de_licencia)
-        adultos.append(n_adultos)
-        niños.append(n_niños)
-        tipo_alojamientos.append(tipo_alojamiento)
-        hosts.append(host)
+        for name in df['name']:
+            url = ad_query(name)
+            urls.append(url)
+            try:
+                num_dorm, numero_de_licencia, n_adultos, n_niños, tipo_alojamiento, host = details(driver, url)
+            except Exception as e:
+                print(f"Error fetching {url}: {e}")
+                num_dorm = None
+                numero_de_licencia = None
+                n_adultos = None
+                n_niños = None
+                tipo_alojamiento = None
+                host = None
+            num_dorms.append(num_dorm)
+            numero_de_licencias.append(numero_de_licencia)
+            adultos.append(n_adultos)
+            niños.append(n_niños)
+            tipo_alojamientos.append(tipo_alojamiento)
+            hosts.append(host)
 
-    df['habitaciones'] = num_dorms
-    df['licencia'] = numero_de_licencias
-    df['capacidad'] = adultos
-    df['niños'] = niños
-    df['tipo de alojamiento']= tipo_alojamientos
-    df['anfitrion']=hosts
-    df['url']=urls
-    df['fecha']=str(date.today())
-    driver.quit()
+        df['habitaciones'] = num_dorms
+        df['licencia'] = numero_de_licencias
+        df['capacidad'] = adultos
+        df['niños'] = niños
+        df['tipo de alojamiento'] = tipo_alojamientos
+        df['anfitrion'] = hosts
+        df['url'] = urls
+        df['fecha'] = str(date.today())
+        df['isla'] = island
+        driver.quit()
 
-    print(df)
-    df.to_csv("booking_mallorca_"+str(date.today())+".csv", index=False)
+        print(df)
+        all_dfs.append(df)
 
-    print(f"\n✅ Guardado {len(df)} alojamientos")
+    final_df = pd.concat(all_dfs, ignore_index=True)
+    final_df.to_csv("booking_islas_" + str(date.today()) + ".csv", index=False)
+    print(f"\n✅ Guardado {len(final_df)} alojamientos")
 
     #data = booking_query(SW, NE)
     #print(data['data']['searchQueries']['search']['results'][20]['basicPropertyData']['pageName'])

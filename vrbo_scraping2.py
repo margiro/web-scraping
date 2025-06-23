@@ -263,41 +263,57 @@ def extract_license_host(url, driver,timeout=7, pause=0.8):
     
 
 if __name__ == "__main__":
-    ROOT_SW = (39.10129556224702, 2.3739429649583883)
-    ROOT_NE = (40.17457797140084, 3.4572007960993005)
-    process_tile(ROOT_SW, ROOT_NE)
-    df = pd.DataFrame(results.values())
-    print(df)
-    df.to_csv("vrbo_mallorca0.csv", index=False)
-    
-    driver.quit()
-    driver = webdriver.Chrome()
-    driver.set_page_load_timeout(30)
-    licencias = []
-    hosts=[]
-    base_urls=[]
+    ISLAND_BBOXES = {
+        "mallorca": ((39.10129556224702, 2.3739429649583883),
+                     (40.17457797140084, 3.4572007960993005)),
+        "menorca": ((39.73202837261271, 3.8166048322976565),
+                    (40.183968810121, 4.306760466171312)),
+        "ibiza": ((38.76877967614272, 1.19828131814009),
+                  (39.164966472991914, 1.6218922749454237)),
+        "formentera": ((38.579720345013094, 1.3865663541037065),
+                       (38.77151823526658, 1.5908027388515222)),
+    }
 
-    for url in df['url']:
-        base_url = url.split("?", 1)[0]
-        base_urls.append(base_url)
-        failed_licenses=[]
-        try:
-            licencia, host = extract_license_host(base_url, driver)
-        except:
-            licencia = None
-            host=None
-            failed_licenses.append(base_url)
-        licencias.append(licencia)
-        hosts.append(host)
+    all_dfs = []
+    for island, (ROOT_SW, ROOT_NE) in ISLAND_BBOXES.items():
+        print(f"▶️ Iniciando procesamiento inicial para {island}...")
+        results = {}
+        process_tile(ROOT_SW, ROOT_NE)
+        df = pd.DataFrame(results.values())
+        print(df)
 
-    driver.quit()
-    df['licencia'] = licencias
-    df['anfitrion']=hosts
-    df['url']=base_urls
-    df['fecha']=str(date.today())
+        driver = webdriver.Chrome()
+        driver.set_page_load_timeout(30)
+        licencias = []
+        hosts = []
+        base_urls = []
+        failed_licenses = []
 
+        for url in df['url']:
+            base_url = url.split("?", 1)[0]
+            base_urls.append(base_url)
+            try:
+                licencia, host = extract_license_host(base_url, driver)
+            except:
+                licencia = None
+                host = None
+                failed_licenses.append(base_url)
+            licencias.append(licencia)
+            hosts.append(host)
 
-    df.to_csv('vrbo_mallorca_'+str(date.today())+'.csv')
-    print(f"\nGuardado {len(df)} alojamientos")
-    print('han fallado '+ str(len(failed_licenses))+ ' licencias')
+        driver.quit()
+        df['licencia'] = licencias
+        df['anfitrion'] = hosts
+        df['url'] = base_urls
+        df['fecha'] = str(date.today())
+        df['isla'] = island
+
+        df.to_csv(f'vrbo_{island}_temp.csv', index=False)
+        print(f"Guardado {len(df)} alojamientos de {island}")
+        print('han fallado '+ str(len(failed_licenses))+ ' licencias')
+        all_dfs.append(df)
+
+    final_df = pd.concat(all_dfs, ignore_index=True)
+    final_df.to_csv('vrbo_islas_' + str(date.today()) + '.csv')
+    print(f"\nGuardado {len(final_df)} alojamientos en total")
 
